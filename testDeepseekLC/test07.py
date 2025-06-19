@@ -24,13 +24,20 @@ from langchain_community.llms import ollama
 
 from langchain_ollama.embeddings import OllamaEmbeddings
 
+import logging
+
+from chromadb.config import Settings
+
+# 设置全局日志级别为 DEBUG，显示所有详细信息
+logging.basicConfig(level=logging.DEBUG)
+
 
 # 返回本地模型的嵌入。在存储嵌入和查询时都需要用到此嵌入函数。
 def  get_embedding():
     # nomic-embed-text: 一个高性能开放嵌入模型，具有较大的标记上下文窗口。
     # 安装：ollama pull nomic-embed-text:latest
     # 这个模型只有274M，但实际做嵌入和检索时，感觉比llama3这样的大模型还要好。
-    embeddings = OllamaEmbeddings(model="nomic-embed-text")
+    embeddings = OllamaEmbeddings(model="nomic-embed-text",base_url="http://localhost:11434")  # Ollama默认端口
     return embeddings
 
 
@@ -56,25 +63,35 @@ print(docs[0].page_content[:500])
 
 # 创建RecursiveCharacterTextSplitter实例，用于将文档进行分块
 text_splitter = RecursiveCharacterTextSplitter(
-    chunk_size=1000, chunk_overlap=20, add_start_index=True
+    chunk_size=1000, chunk_overlap=200, add_start_index=True
 )
 #  使用text_splitter将文档进行分块，并返回结果
-all_splits = text_splitter.split_documents(docs)
-
+all_splits = text_splitter.split_text(docs[0].page_content[:100])
+print('=====================================================================')
+print(all_splits)
+print('=====================================================================')
 
 # 指定Chroma数据库的持久化目录
 persist_directory = 'chroma_langchain_db_test_2'
 
-# 创建Chroma实例，将分块后的文档存储在Chroma数据库中
-vectorstore = Chroma.from_documents(documents=all_splits, embedding=get_embedding(),persist_directory=persist_directory)
+# 创建Chroma数据库实例，并传入文档和嵌入函数
+
+try:
+    client_settings = Settings(anonymized_telemetry=False)
+    vectorstore = Chroma.from_texts(texts=all_splits, embedding=get_embedding(),persist_directory=persist_directory,client_settings=client_settings)
+except Exception as e:
+    print(f"发生异常：{e}")
+
+print('1111111111111')
+
+vectorstore.persist()
 
 # 创建一个retriever实例，用于从Chroma数据库中检索文档
 retriever = vectorstore.as_retriever(search_type="similarity", search_kwargs={"k": 6})
 # 调用retriever的invoke方法，传入查询字符串，并返回检索到的文档
 retrieved_docs = retriever.invoke("What are the approaches to Task Decomposition?")
 
-# 创建一个retriever实例，用于从Chroma数据库中检索文档
-retriever = vectorstore.as_retriever()
+
 
 # 创建一个prompt实例，用于生成提示
 prompt = hub.pull("rlm/rag-prompt")
