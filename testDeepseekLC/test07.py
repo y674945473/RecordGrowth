@@ -28,6 +28,9 @@ import logging
 
 from chromadb.config import Settings
 
+
+# 启动命令 python -m testDeepseekLC.test07
+
 # 设置全局日志级别为 DEBUG，显示所有详细信息
 logging.basicConfig(level=logging.DEBUG)
 

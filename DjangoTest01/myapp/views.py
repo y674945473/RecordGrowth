@@ -18,7 +18,7 @@ def hello(request):
     print(request.path)  # 获取请求路径
     return HttpResponse("Hello World")  # 返回一个字符串到前端
  
- 
+ # 获取用户列表
 def user_list(request, user_id=None):
     if request.method != "GET":
         return JsonResponse({'message': '请求方式错误，应使用GET请求 ！！！'})
